@@ -177,9 +177,9 @@ def generate_coastline(gridw, gridh, sizes: list[int], max_actions_per_agent, mi
         This is converted into a token budget by the equation S/2*e^(W(2t/S*ln(2))) where S=min_actions_per_agent and t is the size.
     """
     # Auxiliary functions
-    def place_land_on_map(posx, posy):
+    def place_land_on_map(posx, posy, t):
         """Place land at `posx`, `posy`, updating auxiliary data-structures as needed (boundary_map)"""
-        grid[posy][posx] = 1
+        grid[posy][posx] = t
 
         # Check if any land has been obstructed and thus should no longer be marked as a boundary
         for nx, ny in get_grid_neighbour_coords(posx, posy, grid):
@@ -196,14 +196,10 @@ def generate_coastline(gridw, gridh, sizes: list[int], max_actions_per_agent, mi
     grid = init_grid(gridw, gridh, 0) # 0 is below sea level / sea, 1 is land
 
     # Create init_tokens list
+    # The user inputs sizes but we need to give tokens to the agents, so
+    # we use this equation to convert a desired size to a desired token count.
     S = min_actions_per_agent
     init_tokens = [math.floor(S/2*math.exp(lambertw(2*N/S*math.log(2)).real)) for N in sizes]
-
-    # Each stores initial # of tokens and coastline (whose length doubles as the # of used tokens)
-    # They also store attractor & repulsor positions. Position it not stored as agents jump around.
-    # Preferred direction is stored is a list of repeated directions (dx, dy) to perform in succession. 
-    # This allows us to program more complex directions than the standard four/eight cardinal directions 
-    # while never missing coastline.
 
     # We run one step for each agent in the list every frame, adding and removing agents as necessary.
     # Once the list is empty, the program terminates.
@@ -212,7 +208,7 @@ def generate_coastline(gridw, gridh, sizes: list[int], max_actions_per_agent, mi
         for pos, token_budget in zip(init_positions, init_tokens)
     ]
 
-    # Some initialisation - we need to start with some filled in coast.
+    # Some initialisation - we need to start with some filled in coast where the agents are.
     for pos in init_positions:
         grid[pos[1]][pos[0]] = 1
 
@@ -247,7 +243,7 @@ def generate_coastline(gridw, gridh, sizes: list[int], max_actions_per_agent, mi
                 
                 # if position is None we couldn't find a valid location, otherwise place land in the location.
                 if position is not None:
-                    place_land_on_map(*position)
+                    place_land_on_map(*position, agent.tokens)
                     agent.tokens_used += 1 # increment tokens used as we just placed land
                     agent.coastline.append(position)
 
@@ -263,10 +259,23 @@ def generate_coastline(gridw, gridh, sizes: list[int], max_actions_per_agent, mi
     return grid
 
 def display_grid(grid, pixel_size=50, addendum=''):
-    color_map = {
-        0: (169, 204, 227), 
-        1: (126, 179, 88)
-    }
+    def lerp(a, b, t):
+        return a + (b - a) * t
+
+    def lerp_color(color, t, target=(0, 0, 0)):
+        return tuple(round(lerp(c, tc, t)) for c, tc in zip(color, target))
+
+
+    water = (169, 204, 227)
+    lightg = (126, 179, 88)
+    darkg = (82, 116, 57)
+    # color_map = {
+    #     0: (169, 204, 227), 
+    #     1: (126, 179, 88)
+    # }
+
+    land_values = list(set(sum(grid, [])))
+    land_values.sort()
 
     im = Image.new('RGB', (pixel_size*len(grid[0]), pixel_size*len(grid))) # w, h
 
@@ -274,7 +283,15 @@ def display_grid(grid, pixel_size=50, addendum=''):
     for row in grid:
         im_row = []
         for state in row:
-            im_row+=[color_map.get(state, (120, 120, 120))]*pixel_size
+            if is_sea(state): color = water
+            else:
+                # Interpolate
+                ind = land_values.index(state)
+                flt = ind/(len(land_values)-1)
+                color = lerp_color(darkg, flt, lightg)
+
+            im_row+=[color]*pixel_size
+            # im_row+=[color_map.get(state, (120, 120, 120))]*pixel_size
         
         pixel_data+=(im_row*pixel_size)
     
@@ -286,23 +303,3 @@ def display_grid(grid, pixel_size=50, addendum=''):
     else:
         im.save(f"img/{path}.png")
     im.show()
-
-w = h = 1000
-SMOOTHING_FACTOR = 1 # the lower the value the less fractal the coastlines will look
-
-# budget = 50000
-# out_grid = generate_coastline(w, h, [budget], budget, SMOOTHING_FACTOR, [(w//2, h//2)])
-# display_grid(out_grid, pixel_size=1)
-
-cnt = 50
-ma, mn = 15000, 3000
-random_points = [
-    (random.randint(0, w-1), random.randint(0, h-1)) for _ in range(cnt)
-]
-
-budgets = [random.randint(mn, ma) for _ in range(cnt)]
-print(f'Expected tiles: {sum(budgets)}')
-out_grid = generate_coastline(w, h, budgets, ma, SMOOTHING_FACTOR, random_points)
-
-print('Rendering grid...')
-display_grid(out_grid, pixel_size=1, addendum=f'S: {SMOOTHING_FACTOR}; B: {sum(budgets)}; {cnt} points; {w}x{h}')
