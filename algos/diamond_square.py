@@ -1,11 +1,6 @@
 import random
-
-def init_grid(w, h, defualt_value):
-    grid = [
-        [defualt_value for i in range(w)] for _ in range(h)
-    ]
-
-    return grid
+from util import init_grid
+from PIL import Image
 
 def diamond_square(size, corners, roughness_scale, roughness_decay):
     # Only the corners of the initial grid are taken into account. Returns heightmap.
@@ -73,3 +68,36 @@ def diamond_square(size, corners, roughness_scale, roughness_decay):
         step_size //= 2
     
     return grid
+
+# Doesn't work, idk why, will fix later.
+######## LOOK ABOVE ########## ^^^^
+
+def display_grid(grid, pixel_size=1):
+    im = Image.new('RGB', (pixel_size*len(grid[0]), pixel_size*len(grid))) # w, h
+
+    mn = min(min(row) for row in grid)
+    mx = max(max(row) for row in grid)
+
+    pixel_data = []
+    for row in grid:
+        im_row = []
+        for state in row:
+            v = (state-mn)/(mx-mn)
+            print(v)
+            im_row+=[(int(255*v), int(255*v), int(255*v))]*pixel_size
+
+        print(im_row)
+        pixel_data+=(im_row*pixel_size)
+    
+    im.show()
+
+import random
+
+s = 9
+
+print('gen')
+grid = diamond_square(s, [10,1, 10, 1], roughness_scale=100, roughness_decay=0.75)
+
+GRID_WIDTH = GRID_HEIGHT = 2**s+1
+
+display_grid(grid)

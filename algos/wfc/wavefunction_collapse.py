@@ -1,6 +1,7 @@
 from PIL import Image
 from collections import Counter
 from pprint import pprint
+from util import init_grid
 import random
 
 W = H = 20
@@ -10,13 +11,6 @@ STATES = ["coast", "land", "sea"]
 # {(1): [{state: weight, ...}, {state: weight, ...}, ...], ...}
 # four lists: north, east, south, west, a state in that respective list can border (1) in that direction with that weight (weight is 0-1)
 rules = {}
-
-def init_grid(w, h, defualt_value):
-    grid = [
-        [defualt_value for i in range(w)] for _ in range(h)
-    ]
-
-    return grid
 
 def get_grid_neighbours(x, y, grid, count=4, return_deltas=False, pad_values=False):
     # count can be 4 or 8
