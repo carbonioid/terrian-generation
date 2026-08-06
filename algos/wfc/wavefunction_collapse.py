@@ -244,7 +244,7 @@ def display_grid(grid, pixel_size=50):
     im.putdata(pixel_data)
     im.show()
 
-from algos.wc_aux import exemplar
+from wc_aux import exemplar
 
 # exemplar = [
 #     ['sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea', 'sea'],
